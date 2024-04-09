@@ -22,10 +22,7 @@ namespace Assignment4
             return user != null ? user.Id : 0; // Return user ID if authentication successful, otherwise 0
         }
 
-        public Account GetAccountDetails(int userId)
-        {
-            return dbContext.Accounts.FirstOrDefault(a => a.UserId == userId);
-        }
+    
 
         public void AddTransaction(int accountId, decimal amount, string description)
         {
@@ -55,10 +52,33 @@ namespace Assignment4
             var transaction = dbContext.TransactionHistories.FirstOrDefault(t => t.TransactionId == transactionId);
             if (transaction != null)
             {
+                // Get the current transaction amount before updating
+                decimal oldAmount = (decimal)transaction.Amount;
+
                 // Update transaction details
                 transaction.Amount = newAmount;
                 transaction.Description = newDescription;
                 dbContext.SaveChanges();
+
+                // Calculate the difference between old and new amount
+                decimal difference = newAmount - oldAmount;
+
+                // Update the current balance in the account table based on transaction type
+                var account = dbContext.Accounts.FirstOrDefault(a => a.AccountId == transaction.AccountId);
+                if (account != null)
+                {
+                    if (newDescription.ToLower().Contains("deposit"))
+                    {
+                        // If the transaction description contains "deposit", add the difference to the current balance
+                        account.CurrentBalance += (double)difference;
+                    }
+                    else if (newDescription.ToLower().Contains("withdraw"))
+                    {
+                        // If the transaction description contains "withdraw", deduct the difference from the current balance
+                        account.CurrentBalance -= (double)difference;
+                    }
+                    dbContext.SaveChanges();
+                }
             }
         }
 
